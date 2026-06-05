@@ -18,16 +18,8 @@ public class Book
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @NotBlank(message = "Title cannot be empty")
     private String title;
-
-    @NotBlank(message = "Author name cannot be empty")
     private String author;
-
-    @Positive(message = "price should be greater than 0")
     private double price;
-
-    @NotBlank(message = "Category name cannot be empty")
     private String category;
 }
