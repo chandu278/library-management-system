@@ -1,13 +1,17 @@
 package com.example.demo.service;
 
 
-import com.example.demo.exception.BookNotFoundException;
+import com.example.demo.dto.BookRequest;
+import com.example.demo.dto.BookResponse;
 import com.example.demo.entity.Book;
+import com.example.demo.exception.BookNotFoundException;
+import com.example.demo.mapper.BookMapper;
 import com.example.demo.repository.BookRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,46 +22,74 @@ public class BookService
     @Autowired
     private BookRepository bookRepository;
 
-    public List<Book> getBooks()
-    {
+    @Autowired
+    private BookMapper bookMapper;
 
-        return bookRepository.findAll();
+
+    public List<BookResponse> getBooks()
+    {
+        List<Book> books = bookRepository.findAll();
+        return books.stream().map(b -> bookMapper.toResponse(b)).toList();
     }
 
-    public ResponseEntity<?> getBookById(Long id)
+    public BookResponse getBookById(Long id)
     {
-       return new ResponseEntity<>( bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException("Book Not Found with id:"+id)),HttpStatus.OK);
+       Optional<Book> book = bookRepository.findById(id);
+
+       return bookMapper.toResponse(book.orElseThrow(() -> new BookNotFoundException("Book not found With Id: " + id)));
 
     }
 
-    public void deleteBook()
-    {
-
-        bookRepository.deleteAll();
-    }
     public void  deleteBookById(Long id)
     {
-        Optional<Book> existingBook=bookRepository.findById(id);
-        if(existingBook.isPresent()) bookRepository.deleteById(id);
-
-        else throw new BookNotFoundException("Book Not Found with id:"+id);
-
-
-
+      Book exitsingBook=bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException("Book not found With Id: " + id));
+      bookRepository.delete(exitsingBook);
     }
 
-    public ResponseEntity<?> updateBookById(Book book, Long id) {
-      Book exisitingbook=bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException("Book Not Found with id: " + id));
-      exisitingbook.setTitle(book.getTitle());
-      exisitingbook.setAuthor(book.getAuthor());
-      exisitingbook.setPrice(book.getPrice());
-      exisitingbook.setCategory(book.getCategory());
-     return new ResponseEntity<>(bookRepository.save(exisitingbook),HttpStatus.ACCEPTED);
 
-    }
-
-    public ResponseEntity<Book> addBook(Book book)
+    public BookResponse addBook(BookRequest bookRequest)
     {
-        return new  ResponseEntity<>(bookRepository.save(book), HttpStatus.CREATED);
+      Book book=bookRepository.save(bookMapper.toEntity(bookRequest));
+      return bookMapper.toResponse(book);
     }
+
+    public BookResponse updateBookById(BookRequest bookRequest, Long id)
+    {
+    Book existingbook=bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException("Book Not Found With Id:"+id));
+
+    existingbook.setTitle(bookRequest.getTitle());
+    existingbook.setAuthor(bookRequest.getAuthor());
+    existingbook.setPrice(bookRequest.getPrice());
+    existingbook.setCategory(bookRequest.getCategory());
+
+    Book updatedBook=bookRepository.save(existingbook);
+
+    return bookMapper.toResponse(updatedBook);
+    }
+
+    public List<BookResponse> findByAuthor(String author)
+    {
+        List<Book> books = bookRepository.findByAuthor(author);
+        return books.stream().map(b -> bookMapper.toResponse(b)).toList();
+    }
+
+    public  List<BookResponse> findByCategory(String category)
+    {
+        List<Book> books=bookRepository.findByCategory(category);
+        return books.stream().map(b -> bookMapper.toResponse(b)).toList();
+    }
+
+    public List<BookResponse> sortByTitle()
+    {
+        List<Book> books=bookRepository.findAll(Sort.by("title"));
+        return books.stream().map(b -> bookMapper.toResponse(b)).toList();
+
+    }
+
+    public List<BookResponse>   sortByPrice()
+    {
+        List<Book> books=bookRepository.findAll(Sort.by("price"));
+        return books.stream().map(b -> bookMapper.toResponse(b)).toList();
+    }
+
 }
